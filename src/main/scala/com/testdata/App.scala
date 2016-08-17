@@ -17,10 +17,12 @@ object App {
     var testTable: TestTable = new TestTable(session)
 
     try {
-      if(arguments(0).equalsIgnoreCase("create"))
-        testTable.createTable()
-      else if(arguments(0).equalsIgnoreCase("insert"))
-        testTable.insertTable(arguments(1).toInt)
+      arguments(0) match {
+        case "create" => testTable.createTable()
+        case "insert" => testTable.insertTable(arguments(1).toInt)
+        case "size" => testTable.showTableSize()
+        case _ => println("Invalid argument")
+      }
       System.exit(0)
     } catch {
       case e: Exception => {
