@@ -9,9 +9,11 @@ import scala.util.Random
 /**
   * Created by mgunes on 11.08.2016.
   */
-class TestTable(session_1: Session) {
-  private val session: Session = session_1
-  private val tableName = "usertest_temp"
+class TestTable(val session: Session) {
+  private val tableName: String = "recursive_test"
+  private val batchCount: Int = 100 // to do : read from conf file
+  private val defaultInsertStatement: String = "INSERT INTO " + tableName +
+    " (id, user_name, password, name, surname, address, school, age, point, rank) values " + "(now(), "
 
   def createTable(): Unit = {
     val query: String = "CREATE TABLE " + tableName + "(" +
@@ -31,52 +33,52 @@ class TestTable(session_1: Session) {
     println("created " + tableName)
   }
 
-  def showTableSize(): Unit = {
-    val xx = session.execute(new SimpleStatement("select count(*) from " + tableName).setReadTimeoutMillis(180000))
-    println(xx.iterator().next().getObject("count"))
+  def getTableSize():BigInt = {
+    val query = session.execute(new SimpleStatement("select count(*) from " + tableName).setReadTimeoutMillis(180000))
+    BigInt(query.iterator().next().getObject("count").toString)
   }
 
-  def insertTable(count: Int): Unit = {
-    val insertCount: Int = count
-    var batchCount: Int = 0
-    //var insertArray: List[String] = List()
-    val defaultInsert = "INSERT INTO " + tableName + " (id, user_name, password, name, surname, address, school, age, point, rank) values " +
-      "(now(), "
+  def insertTable(count: BigInt): Unit = {
+    count > 0 match {
+      case false => println("Insert Operations completed")
+      case _ => {
+        session.execute(createAnInsertQuery(defaultInsertStatement))
+        return insertTable(count - 1)
+      }
+    }
+  }
 
+  def equalize(count: BigInt): Unit = {
+    val size = getTableSize
+
+    ((count - size) > 0) match {
+      case true => {
+        insertTable(count - size)
+        println("Inserted " + (count - size) + " row")
+      }
+      case false => println("You should delete " + (size - count) + " row")
+    }
+  }
+
+  def createAnInsertQuery(defaultInsert: String): String = {
     val insert: StringBuilder = new StringBuilder
-    insert.append("BEGIN BATCH ")
-
+    insert.append(defaultInsert)
 
     val randomNumber = scala.util.Random
-    //var userName: String = "username"
-    //var password: String = "password"
+    val user_name = randomAlpha(10)
+    val password = randomAlpha(10)
+    val age = randomNumber.nextInt(100)
+    val name = randomAlpha(10)
+    val surname = randomAlpha(10)
+    val rank = randomNumber.nextInt(10)
+    val point = randomNumber.nextInt(1000) + 1000
+    val address = randomAlpha(10)
+    val school = randomAlpha(10)
 
-    for(i<-0 until insertCount) {
-      insert.append(defaultInsert)
-      var user_name = randomAlpha(10)
-      var password = randomAlpha(10)
-      var age = randomNumber.nextInt(100)
-      var name = randomAlpha(10)
-      var surname = randomAlpha(10)
-      var rank = randomNumber.nextInt(10)
-      var point = randomNumber.nextInt(1000) + 1000
-      var address = randomAlpha(10)
-      var school = randomAlpha(10)
+    insert.append("'" + user_name + "'," + "'" + password + "'," + "'" + name + "'," + "'" + surname + "'," +
+      "'" + address + "'," + "'" + school + "'," + age + "," + point + "," + rank + ");")
 
-      insert.append("'"+user_name+"'," + "'"+password+"'," + "'"+name+"'," + "'"+surname+"'," + "'"+address + "',"+"'"+school+"'," + age+","+ point+"," + rank + ");")
-      batchCount = batchCount + 1
-      //println(insert.toString())
-
-      if(batchCount == 100 ) {
-        batchCount = 0
-        insert.append(" APPLY BATCH")
-        session.execute(insert.toString())
-        insert.clear()
-        insert.append("BEGIN BATCH ")
-        //println("BATCH has finished")
-      }
-      //println(i)
-    }
+    insert.toString()
   }
 
   def randomAlpha(length: Int): String = {

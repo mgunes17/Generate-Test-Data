@@ -14,19 +14,22 @@ object App {
     val cluster = builder.build()
     val session = cluster.connect(connectionInfo.keysapce)
 
-    var testTable: TestTable = new TestTable(session)
+    val testTable: TestTable = new TestTable(session)
 
     try {
       arguments(0) match {
         case "create" => testTable.createTable()
-        case "insert" => testTable.insertTable(arguments(1).toInt)
-        case "size" => testTable.showTableSize()
+        case "insert" => testTable.insertTable(BigInt(arguments(1)))
+        case "size" => println(testTable.getTableSize())
+        case "equalize" => testTable.equalize(BigInt(arguments(1)))
         case _ => println("Invalid argument")
       }
+      session.close
       System.exit(0)
     } catch {
       case e: Exception => {
         println(e)
+        session.close
         System.exit(1)
       }
     }
