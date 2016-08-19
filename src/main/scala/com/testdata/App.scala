@@ -7,6 +7,8 @@ import com.typesafe.config.ConfigFactory
   * Created by mgunes on 11.08.2016.
   */
 object App {
+  var testTable: TestTable = _
+
   def main (arguments: Array[String]): Unit = {
     val connectionInfo : ConnectionInfo = new App().readConnectionInfo()
 
@@ -14,16 +16,11 @@ object App {
     val cluster = builder.build()
     val session = cluster.connect(connectionInfo.keysapce)
 
-    val testTable: TestTable = new TestTable(session)
+    val input: String = scala.io.StdIn.readLine("test> ")
+    val commandSet: CommandSet = new Parser(input).parse
 
     try {
-      arguments(0) match {
-        case "create" => testTable.createTable()
-        case "insert" => testTable.insertTable(BigInt(arguments(1)))
-        case "size" => println(testTable.getTableSize())
-        case "equalize" => testTable.equalize(BigInt(arguments(1)))
-        case _ => println("Invalid argument")
-      }
+      processCommand(commandSet, session)
       session.close
       System.exit(0)
     } catch {
@@ -33,7 +30,22 @@ object App {
         System.exit(1)
       }
     }
+  }
 
+  def processCommand(commandSet: CommandSet, session: Session): Unit = {
+    commandSet.command match {
+      case "exit" => return System.exit(0)
+      case "set" => testTable = new TestTable(session, commandSet.parameters.head)
+      case "create" => testTable.createTable()
+      case "insert" => testTable.insertTable(BigInt(commandSet.parameters.head))
+      case "size" => println(testTable.getTableSize())
+      case "equalize" => testTable.equalize(BigInt(commandSet.parameters.head))
+      case _ => println("Invalid argument")
+
+      val input: String = scala.io.StdIn.readLine("test> ")
+      val commandSet: CommandSet = new Parser(input).parse
+      return processCommand(commandSet, session)
+    }
   }
 }
 

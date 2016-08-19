@@ -1,16 +1,11 @@
 package com.testdata
 
-import java.util.Date
-
 import com.datastax.driver.core._
-
-import scala.util.Random
 
 /**
   * Created by mgunes on 11.08.2016.
   */
-class TestTable(val session: Session) {
-  private val tableName: String = "recursive_test"
+class TestTable(val session: Session, val tableName: String = "default_table_name") {
   private val batchCount: Int = 100 // to do : read from conf file
   private val defaultInsertStatement: String = "INSERT INTO " + tableName +
     " (id, user_name, password, name, surname, address, school, age, point, rank) values " + "(now(), "
