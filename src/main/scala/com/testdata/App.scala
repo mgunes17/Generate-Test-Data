@@ -36,16 +36,16 @@ object App {
     commandSet.command match {
       case "exit" => return System.exit(0)
       case "set" => testTable = new TestTable(session, commandSet.parameters.head)
+      case "get" => println(testTable.tableName)
       case "create" => testTable.createTable()
       case "insert" => testTable.insertTable(BigInt(commandSet.parameters.head))
       case "size" => println(testTable.getTableSize())
       case "equalize" => testTable.equalize(BigInt(commandSet.parameters.head))
       case _ => println("Invalid argument")
-
-      val input: String = scala.io.StdIn.readLine("test> ")
-      val commandSet: CommandSet = new Parser(input).parse
-      return processCommand(commandSet, session)
     }
+    val input: String = scala.io.StdIn.readLine("test> ")
+    val newCommandSet: CommandSet = new Parser(input).parse
+    return processCommand(newCommandSet, session)
   }
 }
 

@@ -6,7 +6,6 @@ import com.datastax.driver.core._
   * Created by mgunes on 11.08.2016.
   */
 class TestTable(val session: Session, val tableName: String = "default_table_name") {
-  private val batchCount: Int = 100 // to do : read from conf file
   private val defaultInsertStatement: String = "INSERT INTO " + tableName +
     " (id, user_name, password, name, surname, address, school, age, point, rank) values " + "(now(), "
 
@@ -43,7 +42,7 @@ class TestTable(val session: Session, val tableName: String = "default_table_nam
     }
   }
 
-  def equalize(count: BigInt): Unit = {
+  def equalize(count: BigInt): Unit = { //to do : delete or truncate-insert . performance
     val size = getTableSize
 
     ((count - size) > 0) match {
@@ -51,8 +50,16 @@ class TestTable(val session: Session, val tableName: String = "default_table_nam
         insertTable(count - size)
         println("Inserted " + (count - size) + " row")
       }
-      case false => println("You should delete " + (size - count) + " row")
+      case false => {
+        reInsert(count - size)
+        println("Deleted " + (size - count) + " row")
+      }
     }
+  }
+
+  def reInsert(count:BigInt): Unit = {
+    session.execute("truncate table " + tableName)
+    insertTable(count)
   }
 
   def createAnInsertQuery(defaultInsert: String): String = {
