@@ -1,6 +1,7 @@
 package com.testdata
 
 import com.datastax.driver.core._
+import com.datastax.driver.core.exceptions.InvalidQueryException
 import com.typesafe.config.ConfigFactory
 
 /**
@@ -24,6 +25,11 @@ object App {
       session.close
       System.exit(0)
     } catch {
+      case ex: InvalidQueryException => {
+        println("Invalid Query")
+        val input: String = scala.io.StdIn.readLine("test> ")
+        val commandSet: CommandSet = new Parser(input).parse
+      }
       case e: Exception => {
         println(e)
         session.close
@@ -32,13 +38,13 @@ object App {
     }
   }
 
-  def processCommand(commandSet: CommandSet, session: Session): Unit = {
+  def processCommand(commandSet: CommandSet, session: Session): Unit = { //to-do control table is exist
     commandSet.command match {
       case "exit" => return System.exit(0)
       case "set" => testTable = new TestTable(session, commandSet.parameters.head)
       case "get" => println(testTable.tableName)
       case "create" => testTable.createTable()
-      case "insert" => testTable.insertTable(BigInt(commandSet.parameters.head))
+      case "insert" => testTable.insertTable(BigInt(commandSet.parameters.head), new BatchStatement())
       case "size" => println(testTable.getTableSize())
       case "equalize" => testTable.equalize(BigInt(commandSet.parameters.head))
       case _ => println("Invalid argument")

@@ -21,4 +21,8 @@ class ParserTest extends FunSuite with BeforeAndAfter{
   test("head parameter is 1000") {
     assert(commandSet.parameters.head == "1000")
   }
+
+  test("parameter list size is 1") {
+    assert(commandSet.parameters.size == 1)
+  }
 }

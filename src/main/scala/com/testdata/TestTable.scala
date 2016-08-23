@@ -6,8 +6,7 @@ import com.datastax.driver.core._
   * Created by mgunes on 11.08.2016.
   */
 class TestTable(val session: Session, val tableName: String = "default_table_name") {
-  private val defaultInsertStatement: String = "INSERT INTO " + tableName +
-    " (id, user_name, password, name, surname, address, school, age, point, rank) values " + "(now(), "
+  private val batchStatement: BatchStatement = new BatchStatement()
 
   def createTable(): Unit = {
     val query: String = "CREATE TABLE " + tableName + "(" +
@@ -28,16 +27,22 @@ class TestTable(val session: Session, val tableName: String = "default_table_nam
   }
 
   def getTableSize():BigInt = {
-    val query = session.execute(new SimpleStatement("select count(*) from " + tableName).setReadTimeoutMillis(180000))
-    BigInt(query.iterator().next().getObject("count").toString)
+      val query = session.execute(new SimpleStatement("select count(*) from " + tableName).setReadTimeoutMillis(180000))
+      BigInt(query.iterator().next().getObject("count").toString)
   }
 
-  def insertTable(count: BigInt): Unit = {
+  def insertTable(count: BigInt, batchStatement: BatchStatement): Unit = {
     count > 0 match {
       case false => println("Insert Operations completed")
       case _ => {
-        session.execute(createAnInsertQuery(defaultInsertStatement))
-        return insertTable(count - 1)
+        batchStatement.add(createAnInsertQuery())
+        if(batchStatement.size() == 100) {
+          session.execute(batchStatement)
+          println("100")
+          return insertTable(count - 1, batchStatement.clear())
+        }
+
+        return insertTable(count - 1, batchStatement)
       }
     }
   }
@@ -47,7 +52,7 @@ class TestTable(val session: Session, val tableName: String = "default_table_nam
 
     ((count - size) > 0) match {
       case true => {
-        insertTable(count - size)
+        insertTable(count - size, new BatchStatement())
         println("Inserted " + (count - size) + " row")
       }
       case false => {
@@ -59,12 +64,14 @@ class TestTable(val session: Session, val tableName: String = "default_table_nam
 
   def reInsert(count:BigInt): Unit = {
     session.execute("truncate table " + tableName)
-    insertTable(count)
+    insertTable(count, new BatchStatement())
   }
 
-  def createAnInsertQuery(defaultInsert: String): String = {
-    val insert: StringBuilder = new StringBuilder
-    insert.append(defaultInsert)
+  def createAnInsertQuery(): BoundStatement = {
+    val defaultInsertStatement: PreparedStatement = session.prepare(
+      "INSERT INTO " + tableName +
+        " (id, user_name, password, name, surname, address, school, age, point, rank) values " +
+        "(now(), ?, ?, ?, ?, ?, ?, ?, ?, ?);")
 
     val randomNumber = scala.util.Random
     val user_name = randomAlpha(10)
@@ -77,10 +84,9 @@ class TestTable(val session: Session, val tableName: String = "default_table_nam
     val address = randomAlpha(10)
     val school = randomAlpha(10)
 
-    insert.append("'" + user_name + "'," + "'" + password + "'," + "'" + name + "'," + "'" + surname + "'," +
-      "'" + address + "'," + "'" + school + "'," + age + "," + point + "," + rank + ");")
-
-    insert.toString()
+    val boundStatement: BoundStatement = defaultInsertStatement.bind(user_name, password, name, surname, address, school,
+      new Integer(age), new Integer(point), new Integer(rank))
+    boundStatement
   }
 
   def randomAlpha(length: Int): String = {
